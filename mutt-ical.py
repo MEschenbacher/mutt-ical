@@ -14,18 +14,21 @@ import os, sys
 import warnings
 from datetime import datetime
 from subprocess import Popen, PIPE
-from getopt import gnu_getopt as getopt
+import argparse
 
-usage="""
-usage:
-%s [OPTIONS] -e your@email.address filename.ics
-OPTIONS:
-    -i interactive
-    -a accept
-    -d decline
-    -t tentatively accept
-    (accept is default, last one wins)
-""" % sys.argv[0]
+parser = argparse.ArgumentParser(description="""
+Parse an ics file and send a reply
+""")
+
+parser.add_argument('-e', metavar='email', help="Email address to send from")
+intornot = parser.add_mutually_exclusive_group(required=True)
+intornot.add_argument('-v', action='store_true', help="View the invite")
+intornot.add_argument('-i', action='store_true', help="Interactive mode, ask for an answer")
+answergroup = intornot.add_mutually_exclusive_group()
+answergroup.add_argument('-a', action='store_true', default=True, help='Accept')
+answergroup.add_argument('-d', action='store_true', help='Decline')
+answergroup.add_argument('-t', action='store_true', help='Tentative')
+parser.add_argument('icsfile', help="Path to the ics file")
 
 def del_if_present(dic, key):
     if dic.has_key(key):
@@ -148,28 +151,28 @@ def display(ical):
     sys.stdout.write(description + "\n")
 
 if __name__=="__main__":
+
+    args = parser.parse_args()
+
     email_address = None
     accept_decline = 'ACCEPTED'
-    opts, args=getopt(sys.argv[1:],"e:aidt")
 
-    if len(args) < 1:
-        sys.stderr.write(usage)
-        sys.exit(1)
-
-    invitation = openics(args[0])
+    invitation = openics(args.icsfile)
     display(invitation)
 
-    for opt,arg in opts:
-        if opt == '-e':
-            email_address = arg
-        if opt == '-i':
-            accept_decline = get_accept_decline()
-        if opt == '-a':
-            accept_decline = 'ACCEPTED'
-        if opt == '-d':
-            accept_decline = 'DECLINED'
-        if opt == '-t':
-            accept_decline = 'TENTATIVE'
+    if args.v:
+        input("Press enter to exit")
+        sys.exit(0)
+
+    email_address = args.e
+    if args.i:
+        accept_decline = get_accept_decline()
+    if args.a:
+        accept_decline = 'ACCEPTED'
+    if args.d:
+        accept_decline = 'DECLINED'
+    if args.t:
+        accept_decline = 'TENTATIVE'
 
     ans = get_answer(invitation)
 
