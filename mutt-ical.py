@@ -109,9 +109,8 @@ def execute(command, mailtext):
         result = process.poll()
         time.sleep(.1)
     if result != 0:
-        print("unable to send reply, subprocess exited with\
+        input("unable to send reply, subprocess exited with\
                 exit code %d\nPress return to continue" % result)
-        sys.stdin.readline()
 
 def openics(invitation_file):
     with open(invitation_file) as f:
