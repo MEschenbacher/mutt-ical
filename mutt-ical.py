@@ -31,7 +31,7 @@ answergroup.add_argument('-t', action='store_true', help='Tentative')
 parser.add_argument('icsfile', help="Path to the ics file")
 
 def del_if_present(dic, key):
-    if dic.has_key(key):
+    if key in dic:
         del dic[key]
 
 def set_accept_state(attendees, state):
@@ -43,13 +43,14 @@ def set_accept_state(attendees, state):
 
 def get_accept_decline():
     while True:
-        sys.stdout.write("\nAccept Invitation? [Y/n/t]")
-        ans = sys.stdin.readline()
-        if ans.lower() == 'y\n' or ans == '\n':
+        ans = input("Accept Invitation? [y/n/t/Q]")
+        if ans.lower() == 'q' or ans == '':
+            sys.exit(1)
+        elif ans.lower() == 'y':
             return 'ACCEPTED'
-        elif ans.lower() == 'n\n':
+        elif ans.lower() == 'n':
             return 'DECLINED'
-        elif ans.lower() =='t\n':
+        elif ans.lower() =='t':
             return 'TENTATIVE'
 
 def get_answer(invitation):
@@ -63,7 +64,7 @@ def get_answer(invitation):
     #for i in ["uid", "summary", "dtstart", "dtend", "organizer"]:
     # There's a problem serializing TZ info in Python, temp fix
     for i in ["uid", "summary", "organizer"]:
-        if invitation.vevent.contents.has_key(i):
+        if i in invitation.vevent.contents:
             ans.vevent.add( invitation.vevent.contents[i][0] )
 
     # new timestamp
@@ -81,7 +82,7 @@ def write_to_tempfile(ical):
 
 def get_mutt_command(ical, email_address, accept_decline, icsfile):
     accept_decline = accept_decline.capitalize()
-    if ical.vevent.contents.has_key('organizer'):
+    if 'organizer' in ical.vevent.contents:
         if hasattr(ical.vevent.organizer,'EMAIL_param'):
             sender = ical.vevent.organizer.EMAIL_param
         else:
@@ -121,39 +122,41 @@ def openics(invitation_file):
 
 def display(ical):
     summary = ical.vevent.contents['summary'][0].value
-    if ical.vevent.contents.has_key('organizer'):
+    if 'organizer' in ical.vevent.contents:
         if hasattr(ical.vevent.organizer,'EMAIL_param'):
             sender = ical.vevent.organizer.EMAIL_param
         else:
             sender = ical.vevent.organizer.value.split(':')[1] #workaround for MS
     else:
         sender = "NO SENDER"
-    if ical.vevent.contents.has_key('description'):
+    if 'description' in ical.vevent.contents:
         description = ical.vevent.contents['description'][0].value
     else:
         description = "NO DESCRIPTION"
-    if ical.vevent.contents.has_key('attendee'):
+    if 'attendee' in ical.vevent.contents:
         attendees = ical.vevent.contents['attendee']
     else:
         attendees = ""
-    sys.stdout.write("From:\t" + sender + "\n")
-    sys.stdout.write("Title:\t" + summary + "\n")
-    sys.stdout.write("To:\t")
-    for attendee in attendees:
-        if hasattr(attendee,'EMAIL_param'):
-            sys.stdout.write(attendee.CN_param + " <" + attendee.EMAIL_param + ">, ")
-        else:
-            try: 
-                sys.stdout.write(attendee.CN_param + " <" + attendee.value.split(':')[1] + ">, ") #workaround for MS
-            except: 
-                sys.stdout.write(attendee.value.split(':')[1] + " <" + attendee.value.split(':')[1] + ">, ") #workaround for 'mailto:' in email
-    sys.stdout.write("\n")
+
+    print("From:\t\t\t" + sender)
+    print("Title:\t\t\t" + summary)
+    if hasattr(ical.vevent, 'location'):
+        print("Location:\t\t%s" % (ical.vevent.location.value,))
     if hasattr(ical.vevent, 'dtstart'):
-        print("Start:\t%s" % (ical.vevent.dtstart.value,))
+        print("Start:\t\t\t%s" % (ical.vevent.dtstart.value,))
     if hasattr(ical.vevent, 'dtend'):
-        print("End:\t%s" % (ical.vevent.dtend.value,))
-    sys.stdout.write("\n")
-    sys.stdout.write(description + "\n")
+        print("End:\t\t\t%s" % (ical.vevent.dtend.value,))
+    print("Attendees:")
+    for attendee in attendees:
+        if hasattr(attendee,'EMAIL_param') and hasattr(attendee, 'CN_param'):
+            print("\t\t\t%s <%s>" % (attendee.CN_param, attendee.EMAIL_param))
+        elif hasattr(attendee, 'CN_param'):
+            print("\t\t\t%s <%s>" % (attendee.CN_param, attendee.value.split(':')[1]))
+        else:
+            # workaround for 'mailto:' in email
+            print("\t\t\t%s <%s>" % (attendee.value.split(':')[1], attendee.value.split(':')[1]))
+    print("Description:")
+    print(description)
 
 if __name__=="__main__":
 
@@ -181,7 +184,7 @@ if __name__=="__main__":
 
     ans = get_answer(invitation)
 
-    if invitation.vevent.contents.has_key('attendee'):
+    if 'attendee' in invitation.vevent.contents:
         attendees = invitation.vevent.contents['attendee']
     else:
         attendees = ""
@@ -190,7 +193,7 @@ if __name__=="__main__":
     ans.vevent.attendee_list.pop()
     flag = 1
     for attendee in attendees:
-        if hasattr(attendee,'EMAIL_param'):
+        if hasattr(attendee, 'EMAIL_param'):
             if attendee.EMAIL_param == email_address:
                 ans.vevent.attendee_list.append(attendee)
                 flag = 0
