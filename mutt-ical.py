@@ -80,7 +80,7 @@ def write_to_tempfile(ical):
         f.write(ical.serialize())
     return icsfile, tempdir
 
-def get_mutt_command(ical, email_address, accept_decline, icsfile):
+def get_mutt_command(command_base, ical, email_address, accept_decline, icsfile):
     accept_decline = accept_decline.capitalize()
     if 'organizer' in ical.vevent.contents:
         if hasattr(ical.vevent.organizer,'EMAIL_param'):
@@ -90,8 +90,11 @@ def get_mutt_command(ical, email_address, accept_decline, icsfile):
     else:
         sender = "NO SENDER"
     summary = ical.vevent.contents['summary'][0].value
-    command = ["mutt", "-a", icsfile,
-            "-s", "'%s: %s'" % (accept_decline, summary), "--", sender]
+    command = [ f % dict(icsfile=icsfile, summary=summary, sender=sender,
+        accept_string=accept_decline) for f in
+            command_base ]
+    #"mutt", "-a", icsfile,
+    #        "-s", "'%s: %s'" % (accept_decline, summary), "--", sender]
     #Uncomment the below line, and move it above the -s line to enable the wrapper
             #"-e", 'set sendmail=\'ical_reply_sendmail_wrapper.sh\'',
     return command
@@ -160,7 +163,7 @@ def display(ical):
 
 if __name__=="__main__":
 
-    args = parser.parse_args()
+    args, command_base = parser.parse_known_args()
 
     email_address = None
     accept_decline = 'ACCEPTED'
@@ -207,9 +210,9 @@ if __name__=="__main__":
 
     icsfile, tempdir = write_to_tempfile(ans)
 
-    mutt_command = get_mutt_command(ans, email_address, accept_decline, icsfile)
-    mailtext = "'%s has %s'" % (email_address, accept_decline.lower())
-    execute(mutt_command, mailtext)
+    mutt_command = get_mutt_command(command_base, ans, email_address, accept_decline, icsfile)
+    mailtext = "%s has %s" % (email_address, accept_decline.lower())
+    execute(mutt_command, mailtext.encode('utf-8'))
 
     os.remove(icsfile)
     os.rmdir(tempdir)

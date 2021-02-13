@@ -8,10 +8,10 @@ Installing
 1) Copy it into somewhere in your PATH, (or you can specify the PATH in your .mailcap)
 2) Edit your mailcap (~/.mailcap or /etc/mailcap) to have the following line:
 
-    text/calendar; <path>mutt-ical.py -i -e "user@domain.tld" %s
-    application/ics; <path>mutt-ical.py -i -e "user@domain.tld" %s
-
-(Don't forget to add your email address)
+    text/calendar; <path>mutt-ical.py -v %s
+    application/ics; <path>mutt-ical.py -v %s
+3) bind a macro key to answer to the invitation (r for reply in the attachment section)
+    macro attach r "<shell-escape>python3 ~/git/mutt-ical/mutt-ical.py -i -e john.doe@example.org ~/ical -- mutt -F ~/.mutt/account.$my_account_name.compose -a \"%(icsfile)s\" -s \"%(accept_string)s: %(summary)s\" -- \"%(sender)s\"<enter>"
 
 OSX Users
 ---------
