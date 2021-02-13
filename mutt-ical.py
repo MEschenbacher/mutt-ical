@@ -166,7 +166,6 @@ if __name__=="__main__":
 
     args, command_base = parser.parse_known_args()
 
-    email_address = None
     accept_decline = 'ACCEPTED'
 
     invitation = openics(args.icsfile)
