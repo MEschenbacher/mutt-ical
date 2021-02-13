@@ -18,6 +18,8 @@ import argparse
 
 parser = argparse.ArgumentParser(description="""
 Parse an ics file and send a reply
+
+Append -- and your send command at the end
 """)
 
 parser.add_argument('-e', metavar='email', help="Email address to send from")
@@ -37,15 +39,15 @@ def del_if_present(dic, key):
 def set_accept_state(attendees, state):
     for attendee in attendees:
         attendee.params['PARTSTAT'] = [state]
-        for i in ["RSVP","ROLE","X-NUM-GUESTS","CUTYPE"]:
-            del_if_present(attendee.params,i)
+        for i in ["RSVP", "ROLE", "X-NUM-GUESTS", "CUTYPE"]:
+            del_if_present(attendee.params, i)
     return attendees
 
 def get_accept_decline():
     while True:
-        ans = input("Accept Invitation? [y/n/t/Q]")
+        ans = input("Accept Invitation? [y/n/t/Q] ")
         if ans.lower() == 'q' or ans == '':
-            sys.exit(1)
+            sys.exit(0)
         elif ans.lower() == 'y':
             return 'ACCEPTED'
         elif ans.lower() == 'n':
@@ -177,12 +179,13 @@ if __name__=="__main__":
     email_address = args.e
     if args.i:
         accept_decline = get_accept_decline()
-    if args.a:
-        accept_decline = 'ACCEPTED'
-    if args.d:
-        accept_decline = 'DECLINED'
-    if args.t:
-        accept_decline = 'TENTATIVE'
+    else:
+        if args.a:
+            accept_decline = 'ACCEPTED'
+        elif args.d:
+            accept_decline = 'DECLINED'
+        elif args.t:
+            accept_decline = 'TENTATIVE'
 
     ans = get_answer(invitation)
 
@@ -190,27 +193,27 @@ if __name__=="__main__":
         attendees = invitation.vevent.contents['attendee']
     else:
         attendees = ""
-    set_accept_state(attendees,accept_decline)
+    set_accept_state(attendees, accept_decline)
     ans.vevent.add('attendee')
     ans.vevent.attendee_list.pop()
-    flag = 1
+    found = False
     for attendee in attendees:
         if hasattr(attendee, 'EMAIL_param'):
             if attendee.EMAIL_param == email_address:
                 ans.vevent.attendee_list.append(attendee)
-                flag = 0
+                found = True
         else:
             if attendee.value.split(':')[1] == email_address:
                 ans.vevent.attendee_list.append(attendee)
-                flag = 0
-    if flag:
-        sys.stderr.write("Seems like you have not been invited to this event!\n")
+                found = True
+    if not found:
+        print("Seems like you have not been invited to this event!")
         sys.exit(1)
 
     icsfile, tempdir = write_to_tempfile(ans)
 
     mutt_command = get_mutt_command(command_base, ans, email_address, accept_decline, icsfile)
-    mailtext = "%s has %s" % (email_address, accept_decline.lower())
+    mailtext = "%s selected %s" % (email_address, accept_decline.lower())
     execute(mutt_command, mailtext.encode('utf-8'))
 
     os.remove(icsfile)
